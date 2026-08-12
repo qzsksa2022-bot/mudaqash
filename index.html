@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>مداقش — اونلاين</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- شاشة البداية -->
+<div id="screen-home" class="screen active">
+  <div class="home-card">
+    <h1>🃏 مداقش</h1>
+    <p class="subtitle">لعبة الورق والرصيد بين الأصدقاء</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="join">دخول لغرفة</button>
+      <button class="tab-btn" data-tab="create">إنشاء غرفة جديدة</button>
+    </div>
+
+    <div id="tab-join" class="tab-panel active">
+      <label>اسمك</label>
+      <input id="join-name" type="text" placeholder="اكتب اسمك" maxlength="20" />
+      <label>كود الغرفة</label>
+      <input id="join-code" type="text" placeholder="مثال: AB12C" maxlength="6" style="text-transform:uppercase" />
+      <button id="btn-join" class="primary">انضمام للطاولة</button>
+    </div>
+
+    <div id="tab-create" class="tab-panel">
+      <label>اسمك</label>
+      <input id="create-name" type="text" placeholder="اكتب اسمك" maxlength="20" />
+      <label>الرصيد الابتدائي لكل لاعب</label>
+      <input id="create-balance" type="number" value="10000" min="500" step="500" />
+      <label>أقل قيمة رفع</label>
+      <input id="create-minraise" type="number" value="100" min="10" step="10" />
+      <label>أقصى عدد لاعبين</label>
+      <input id="create-max" type="number" value="8" min="3" max="10" />
+      <button id="btn-create" class="primary">إنشاء الطاولة</button>
+    </div>
+
+    <p id="home-error" class="error-text"></p>
+  </div>
+</div>
+
+<!-- شاشة غرفة الانتظار -->
+<div id="screen-lobby" class="screen">
+  <div class="home-card">
+    <h2>غرفة الانتظار</h2>
+    <p>كود الغرفة، شاركه مع أصدقائك:</p>
+    <div class="room-code" id="lobby-code">------</div>
+    <button id="btn-copy-code" class="secondary">نسخ الكود</button>
+
+    <h3>اللاعبون</h3>
+    <ul id="lobby-players" class="lobby-players"></ul>
+
+    <button id="btn-start-game" class="primary">ابدأ اللعبة</button>
+    <p class="hint">تحتاج 3 لاعبين على الأقل. صاحب الغرفة فقط يقدر يبدأ.</p>
+    <p id="lobby-error" class="error-text"></p>
+  </div>
+</div>
+
+<!-- شاشة الطاولة -->
+<div id="screen-table" class="screen">
+  <div class="topbar">
+    <div class="topbar-item">جولة #<span id="round-num">0</span></div>
+    <div class="topbar-item pot">البنك: <span id="pot-amount">0</span></div>
+    <button id="btn-log-toggle" class="icon-btn">📜</button>
+    <button id="btn-rules-toggle" class="icon-btn">❓</button>
+  </div>
+
+  <div id="table-players" class="table-players"></div>
+
+  <div id="banner" class="banner"></div>
+
+  <div id="my-hand" class="my-hand"></div>
+
+  <div id="action-bar" class="action-bar"></div>
+
+  <div id="log-panel" class="side-panel">
+    <div class="side-panel-header">سجل الأحداث <button id="btn-log-close" class="icon-btn">✕</button></div>
+    <div id="log-list" class="log-list"></div>
+  </div>
+
+  <div id="rules-panel" class="side-panel">
+    <div class="side-panel-header">قوانين اللعبة <button id="btn-rules-close" class="icon-btn">✕</button></div>
+    <div class="rules-body">
+      <p><b>الفكرة:</b> كل لاعب يبدأ برصيد. توزع 4 أوراق لكل لاعب من دستة كاملة (2 إلى الآس).</p>
+      <p><b>المراهنة:</b> كل لاعب بدوره يقدر: <b>يرفع</b> (يزيد الرهان) أو <b>يجاري</b> (يدفع نفس أعلى رهان) أو <b>ينسحب</b>.</p>
+      <p><b>الشيخ:</b> إذا بقي أكثر من لاعب بعد انتهاء المراهنة، آخر من رفع يصبح "الشيخ" 👑.</p>
+      <p><b>المفاوضة:</b> الشيخ عنده 3 محاولات يعرض فيها مبلغ على أي لاعب متبقي مقابل انسحابه بدون كشف أوراقه. أو يقدر يعلن "المداقش" مباشرة.</p>
+      <p><b>المداقش (كشف الأوراق):</b> يكشف كل اللاعبين المتبقين أوراقهم، وصاحب أقوى مشروع يفوز بكل البنك (وعند التعادل يتقاسمونه).</p>
+      <p><b>ترتيب المشاريع (من الأقوى):</b> رباعية 🡒 تتابع 🡒 ثلاثية 🡒 زوجين 🡒 زوج 🡒 ورقة عالية.</p>
+      <p><b>الفوز باللعبة:</b> اللاعب الذي ينتهي رصيده يخرج من اللعبة. آخر لاعب يبقى برصيد هو الفائز الكبير 🏆.</p>
+    </div>
+  </div>
+</div>
+
+<!-- مودال المداقش (كشف الأوراق) -->
+<div id="showdown-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2>🃏 المداقش!</h2>
+    <div id="showdown-results" class="showdown-results"></div>
+    <button id="btn-showdown-close" class="primary">تمام</button>
+  </div>
+</div>
+
+<!-- مودال نهاية اللعبة -->
+<div id="gameover-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2>🏆 انتهت اللعبة</h2>
+    <p id="gameover-text"></p>
+    <button id="btn-gameover-close" class="secondary">إغلاق</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</body>
+</html>
