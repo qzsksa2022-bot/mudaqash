@@ -114,11 +114,13 @@ class Room {
     this.log = [];
     this.winnerId = null;
     this.roundNumber = 0;
+    this.lastActivity = Date.now();
   }
 
   addLog(msg) {
     this.log.push({ msg, ts: Date.now() });
     if (this.log.length > 200) this.log.shift();
+    this.lastActivity = Date.now();
   }
 
   get activePlayers() {
@@ -162,6 +164,16 @@ class Room {
   }
 
   removePlayer(id) {
+    // لا نحذف اللاعب فورًا عند انقطاع الاتصال (مثلاً لما يبدّل التطبيقات
+    // بجواله لحظة عشان يرسل كود الغرفة لصديقه) — بس نعلّمه كغير متصل.
+    // هذا يمنع حذف الغرفة بالغلط لو كل اللاعبين انقطعوا لحظيًا.
+    const p = this.findPlayer(id);
+    if (!p) return;
+    p.connected = false;
+    this.lastActivity = Date.now();
+  }
+
+  leaveRoomPermanently(id) {
     const p = this.findPlayer(id);
     if (!p) return;
     if (this.state === 'lobby') {
@@ -172,6 +184,10 @@ class Room {
     } else {
       p.connected = false;
     }
+  }
+
+  hasAnyConnectedPlayer() {
+    return this.players.some((p) => p.connected);
   }
 
   canStart() {
@@ -522,11 +538,3 @@ class Room {
         // نكشف الأوراق فقط في حالة المداقش (roundEnd مع lastShowdown) أو لصاحبها
         revealedHand:
           this.state === 'roundEnd' && this.lastShowdown
-            ? this.lastShowdown.results.find((r) => r.playerId === p.id)?.hand || null
-            : null,
-      })),
-    };
-  }
-}
-
-module.exports = { Room, evaluateHand, compareHands, CATEGORY_NAMES };
