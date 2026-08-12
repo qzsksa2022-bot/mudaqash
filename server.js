@@ -72,6 +72,7 @@ io.on('connection', (socket) => {
       if (!player) throw new Error('لم يتم العثور على اللاعب في هذه الغرفة');
       player.socketId = socket.id;
       player.connected = true;
+      room.lastActivity = Date.now();
       socketMeta.set(socket.id, { code, playerId });
       socket.join(code);
       cb && cb({ ok: true, code, playerId });
@@ -151,15 +152,28 @@ io.on('connection', (socket) => {
     if (!meta) return;
     const room = rooms.get(meta.code);
     if (room) {
+      // ما نحذف اللاعب ولا الغرفة فورًا — ممكن يكون انقطاع مؤقت
+      // (مثلاً بدّل تطبيقات بجواله لحظة). نعلّمه بس كغير متصل،
+      // وتنظيف الغرف المهجورة فعليًا يصير بشكل دوري (انظر الحلقة تحت).
       room.removePlayer(meta.playerId);
       broadcastRoom(room);
-      if (room.players.length === 0) {
-        rooms.delete(meta.code);
-      }
     }
     socketMeta.delete(socket.id);
   });
 });
+
+// تنظيف دوري للغرف المهجورة تمامًا (كل لاعبينها غير متصلين لفترة طويلة)
+// عشان ما تتراكم بالذاكرة، بدون ما نحذف غرفة فيها أي احتمال رجوع لاعب لها.
+const ABANDON_AFTER_MS = 30 * 60 * 1000; // 30 دقيقة بدون أي نشاط أو اتصال
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, room] of rooms) {
+    const idleFor = now - (room.lastActivity || 0);
+    if (idleFor > ABANDON_AFTER_MS && !room.hasAnyConnectedPlayer()) {
+      rooms.delete(code);
+    }
+  }
+}, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
